@@ -49,17 +49,12 @@
 
 text = input("Введите текст: ")
 
-if text.strip() == "":
-    print("Нет слов.")
-else:
-    for znak in [",", ".", "!", "?", ":", ";", "\"", "'", "-", "(", ")"]:
-        text = text.replace(znak, "")
-
-    words = text.split()
-
-    if len(words) == 0:
-        print("Нет слов.")
-    else:
+def parse_the_word(text):
+    if len(text) != 0 and any(char.isalpha() for char in text):
+        for znak in [",", ".", "!", "?", ":", ";", "\"", "'", "-", "(", ")"]:
+            text = text.replace(znak, "")
+    
+        words = text.split()
         max_len = 0
         first_word = ""
         count = 0
@@ -67,14 +62,13 @@ else:
         for w in words:
             if len(w) > max_len:
                 max_len = len(w)
-
-        for w in words:
+                first_word = w
             if len(w) == max_len:
                 count += 1
-                if first_word == "":
-                    first_word = w
 
-        print("Самое длинное слово:", first_word)
-        print("Длина:", max_len)
-        print("Таких слов:", count)
 
+        return f"Самое длинное слово: {first_word} Длина: {max_len} Таких слов: {count}"
+    return "нет слов"
+
+
+print(parse_the_word(text))
