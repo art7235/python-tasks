@@ -10,10 +10,16 @@ def create_character():
     if name is None or level is None:
         return {"error": "name and level are required"}
 
-    try:
-        level_int = int(level)
-    except ValueError:
+    if not level.isdigit():
         return {"error": "level must be a number"}
+
+    level_int = int(level)
+
+    if level_int < 1:
+        return {"error": "level must be at least 1"}
+
+    if name == "":
+        return {"error": "name cannot be empty"}
 
     if level_int < 5:
         rank = "Новичок"

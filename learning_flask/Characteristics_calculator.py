@@ -10,11 +10,17 @@ def push_characteristics():
     if strength is None or agility is None:
         return {"error": "strength and agility are required"}
     
-    return set_characteristics(int(strength), int(agility))
+    if not strength.isdigit() or not agility.isdigit():
+        return {"error": "strength and agility must be numbers"}
     
-
-app.run()
-
+    strength_int = int(strength)
+    agility_int = int(agility)
+    
+    if strength_int < 0 or agility_int < 0:
+        return {"error": "strength and agility cannot be negative"}
+    
+    return set_characteristics(strength_int, agility_int)
+    
 
 def set_characteristics(strength, agility):
     power = strength + agility
@@ -27,3 +33,6 @@ def set_characteristics(strength, agility):
             "attack": attack,
             "speed": speed,
             }
+
+if __name__ == "__main__":
+    app.run()
