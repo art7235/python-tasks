@@ -1,14 +1,6 @@
-from flask import Flask, request
-
-app = Flask(__name__)
-
-@app.route("/character")
-def create_character():
-    name = request.args.get("name")
-    level = request.args.get("level")
-
+def chek_character_data(name, level):
     if name is None or level is None:
-        return {"error": "name and level are required"}
+            return {"error": "name and level are required"}
 
     if not level.isdigit():
         return {"error": "level must be a number"}
@@ -20,7 +12,9 @@ def create_character():
 
     if name == "":
         return {"error": "name cannot be empty"}
+    
 
+def get_charcter_rank(level_int, name):
     if level_int < 5:
         rank = "Новичок"
     elif 5 <= level_int <= 10:
@@ -28,11 +22,4 @@ def create_character():
     else:
         rank = "Мастер"
     
-    return {
-        "name": name,
-        "level": level_int,
-        "rank": rank
-    }
-
-if __name__ == "__main__":
-    app.run()
+    return rank
