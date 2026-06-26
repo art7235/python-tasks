@@ -1,3 +1,8 @@
+import json
+
+
+
+
 data_base = {}
 
 def create_user(name, age):
@@ -13,7 +18,7 @@ def get_user(name, age):
 
 
 
-json = {}
+response = {}
 label = True
 while label:
     method = input("введите метод: ")
@@ -21,19 +26,20 @@ while label:
 
     if method == "GET":
         if path == "/hello":
-            json = {"status": 200,"data": "Hello, world"}
-            print(json)
+            response = {"status": 200,"data": "Hello, world"}
+            a = json.dumps(response)
+            print(a)
         elif path == "/user":
-            json = {"status": 200,"data": data_base}
-            print(json)
+            response = {"status": 200,"data": data_base}
+            print(response)
         else:
-            json = {"status": 404, "error": "Not found"}
-            print(json)
+            response = {"status": 404, "error": "Not found"}
+            print(response)
 
-    if method == "POST":
+    elif method == "POST":
         if path == "/user":
             create_user(input("укажите имя: "), input("укажите возраст: "))
 
     else:
-            json = {"status": 404, "error": "Not found"}
-            print(json)
+        response = {"status": 404, "error": "Not found"}
+        print(response)
