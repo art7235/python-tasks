@@ -11,13 +11,13 @@ def create_player():
         return {"error": "Invalid request format"}, 400
     
     name = data.get('name')
-    level = data.get('level')
+    level_str = data.get('level')
     
-    level_int = utils.check_create_player(name, level)
-    if isinstance(level_int, dict):
-        return level_int, 400
+    level, error = utils.check_player_and_get_level(name, level_str)
+    if error != "":
+        return {"error": error}, 400
     
-    player = utils.create_player(name, level_int)
+    player = utils.create_player(name, level)
     return {"message": "Player created",
             "player": player.model_dump()}, 200
 
@@ -31,13 +31,11 @@ def top_up_balance():
     id = data.get('id')
     gold = data.get('gold')
     
-    res = utils.check_top_up_balance(id, gold)
-    if isinstance(res, dict):
-        return res, 400
+    id_int, error = utils.check_top_up_balance(id, gold)
+    if error != "":
+        return {"error": error}, 400
     
-    id_int, gold_int = res
-    
-    player = utils.top_up_balance(id_int, gold_int)
+    player = utils.top_up_balance(id_int, int(gold))
     if player:
         return {"message": "balance replenished",
                 "player": player.model_dump()}, 200
@@ -54,9 +52,9 @@ def return_lst_players():
 def get_player():
     id = request.args.get("id")
     
-    id_int = utils.check_get_player(id)
-    if isinstance(id_int, dict):
-        return id_int, 400
+    id_int, error = utils.check_get_player(id)
+    if error != "":
+        return {"error": error}, 400
     
     player = utils.get_player(id_int)
     if player:
@@ -68,9 +66,9 @@ def get_player():
 def delete_player():
     id = request.args.get("id")
     
-    id_int = utils.check_get_player(id)
-    if isinstance(id_int, dict):
-        return id_int, 400
+    id_int, error = utils.check_get_player(id)
+    if error != "":
+        return {"error": error}, 400
     
     utils.delete_player(id_int)
     return {"message": "player was deleted"}, 200
