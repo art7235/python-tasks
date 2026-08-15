@@ -1,0 +1,5 @@
+$body = '{"name":"Alex"}'
+Invoke-WebRequest -Uri http://localhost:5000/hello -Method POST -ContentType "application/json" -Body $body
+
+$json = '{\"name\":\"Alex\"}'
+curl.exe -X POST http://localhost:5000/hello -H "Content-Type: application/json" -d $json
