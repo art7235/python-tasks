@@ -1,10 +1,12 @@
 from pydantic import BaseModel
 from datetime import datetime
 
+
 class Player(BaseModel):
     name: str
     level: int
     gold: int
+    experience: int
     id: int
     created_at: datetime
 
@@ -12,25 +14,17 @@ players = {}
 player_id = 0
 
 
-def check_player_and_get_level(name: str, level: int) -> tuple[int , str]:
-    if name is None or level is None:
-        return 0, "name and level are required"
+def check_player_and_get_level(name: str) -> tuple[int, str]:
+    if name is None:
+        return 0, "name are required"
     
     if name == "":
         return 0, "name cannot be empty"
     
-    if not str(level).isdigit():
-        return 0, "level must be a number"
-    
-    level_int = int(level)
-    
-    if level_int < 1:
-        return 0, "level must be at least 1"
-    
-    return level_int, ""
+    return 1, ""
 
 
-def check_top_up_balance(id: str, gold: str) -> tuple[int , str]:
+def check_top_up_balance(id: str, gold: str) -> tuple[int, str]:
     if id is None or gold is None:
         return 0, "id and gold are required"
     
@@ -49,7 +43,26 @@ def check_top_up_balance(id: str, gold: str) -> tuple[int , str]:
     return id_int, ""
 
 
-def check_get_player(id: str) -> tuple[int , str]:
+def check_id_and_experience(id: str, experience: str) -> tuple[int, str]:
+    if id is None or experience is None:
+        return 0, "id and experience are required"
+    
+    if not id.isdigit():
+        return 0, "id must be a number"
+    
+    if not experience.isdigit():
+        return 0, "experience must be a number"
+    
+    id_int = int(id)
+    experience_int = int(experience)
+    
+    if experience_int < 0:
+        return 0, "experience cannot be negative"
+    
+    return id_int, ""
+
+
+def check_get_player(id: str) -> tuple[int, str]:
     if id is None or id == "":
         return 0, "id is required"
     
@@ -59,22 +72,30 @@ def check_get_player(id: str) -> tuple[int , str]:
     return int(id), ""
 
 
-def create_player(name: str, level: int) -> Player:
+def create_player(name: str) -> Player:
     global player_id
     player_id += 1
-    player = Player(name=name, level=level, gold=0, id=player_id, created_at=datetime.now())
+    player = Player(name=name, level=0, gold=0, experience=0, id=player_id, created_at=datetime.now())
     players[player_id] = player
     return player
 
 
-def top_up_balance(id, gold):
+def top_up_balance(id: int, gold: int) -> Player | None:  
     if id in players:
         players[id].gold += gold
         return players[id]
     return None
 
 
-def return_lst_players():
+def top_up_experience(id: int, experience: int) -> Player | None:  
+    if id in players:
+        players[id].experience += experience
+        players[id].level = (players[id].experience//100) + 1
+        return players[id]
+    return None
+
+
+def return_lst_players() -> list:
     players_list = list(players.items())
     players_list.sort(key=lambda item: item[1].created_at)
 
@@ -87,22 +108,22 @@ def return_lst_players():
     return res
 
 
-def get_player(id):
+def get_player(id: int) -> Player | None:  
     if id in players:
         return players[id]
     return None
 
 
-def delete_player(id):
+def delete_player(id: int) -> bool:  
     if id in players:
         del players[id]
         return True
     return False
 
 
-def ret_leaderboard():
+def ret_leaderboard() -> list:  
     players_list = list(players.items())
-    players_list.sort(key=lambda item: item[1].level, reverse=True)
+    players_list.sort(key=lambda item: item[1].experience, reverse=True)
     
     res = []
     for _, player in players_list:
@@ -111,10 +132,13 @@ def ret_leaderboard():
             "name": player.name,
             "level": player.level
         })
+
+    if len(res) > 4:
+        return res[0:4]
     return res
 
 
-def ret_stats():
+def ret_stats() -> dict:  
     max_level = 0
     averge_level = 0
     

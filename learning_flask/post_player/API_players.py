@@ -11,13 +11,12 @@ def create_player():
         return {"error": "Invalid request format"}, 400
     
     name = data.get('name')
-    level_str = data.get('level')
     
-    level, error = utils.check_player_and_get_level(name, level_str)
+    level, error = utils.check_player_and_get_level(name)
     if error != "":
         return {"error": error}, 400
     
-    player = utils.create_player(name, level)
+    player = utils.create_player(name)
     return {"message": "Player created",
             "player": player.model_dump()}, 200
 
@@ -41,6 +40,25 @@ def top_up_balance():
                 "player": player.model_dump()}, 200
     return {"error": "User not found"}, 404
 
+
+@app.route("/player/experience", methods=['POST'])
+def raise_the_level():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return {"error": "Invalid request format"}, 400
+
+    id = data.get('id')
+    experience = data.get("experience")
+
+    id_int, error = utils.check_id_and_experience(id, experience)
+    if error != "":
+            return {"error": error}, 400
+    player = utils.top_up_experience(id_int, int(experience))
+    if player:
+        return {"message": "experience replenished",
+            "player": player.model_dump()}, 200
+    return {"error": "User not found"}, 404
+    
 
 @app.route('/players', methods=['GET'])
 def return_lst_players():
