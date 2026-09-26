@@ -70,16 +70,31 @@ def raise_the_level():
 @app.route('/players', methods=['GET'])
 def return_lst_players():
     name = request.args.get("name")
+    id = request.args.get("id")
+    min_level = request.args.get("min_level")
+    max_level = request.args.get("max_level")
+
+    filter = utils.PlayersFilter()
 
     if name is not None:
-        name_clean, error = utils.check_search_name(name)
-        if error != "":
-            return error_response(error, 400)
+        filter.name_pattern = name
 
-        players_list = utils.search_players_by_name(name_clean)
-        return players_list, 200
+    if id is not None:
+        if isinstance(id, bool) or not str(id).isdigit():
+            return error_response("id must be a number", 400)
+        filter.id_pattern = int(id)
 
-    players_list = utils.return_lst_players()
+    if min_level is not None:
+        if isinstance(min_level, bool) or not str(min_level).isdigit():
+            return error_response("min_level must be a number", 400)
+        filter.min_level = int(min_level)
+
+    if max_level is not None:
+        if isinstance(max_level, bool) or not str(max_level).isdigit():
+            return error_response("max_level must be a number", 400)
+        filter.max_level = int(max_level)
+
+    players_list = utils.players_list(filter)
     return {"players": players_list}, 200
 
 

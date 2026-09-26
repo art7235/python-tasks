@@ -10,6 +10,19 @@ class Player(BaseModel):
     id: int
     created_at: datetime
 
+
+class PlayersFilter:
+    name_pattern: str = ""
+    id_pattern: int | None = None
+    min_level: int | None = None
+    max_level: int | None = None
+
+    def has_name(self):
+        if self.name_pattern is None or self.name_pattern == "":
+            return False
+        return True
+
+
 players = {}
 player_id = 0
 
@@ -78,13 +91,6 @@ def check_get_player(id: str) -> tuple[int, str]:
     return int(id), ""
 
 
-def check_search_name(name: str) -> tuple[str, str]:
-    if name is None or name.strip() == "":
-        return "", "name is required"
-
-    return name.strip(), ""
-
-
 def is_name_taken(name: str) -> bool:
     name_lower = name.strip().casefold()
     for player in players.values():
@@ -126,32 +132,49 @@ def calculate_level(experiece: int) -> int:
     return (experiece // 100) + 1
 
 
-def return_lst_players() -> list:
+def player_matches_filter(player: Player, filter: PlayersFilter) -> bool:
+    if filter.has_name():
+        name_lower = filter.name_pattern.casefold()
+        if name_lower not in player.name.casefold():
+            return False
+
+    if filter.id_pattern is not None:
+        if player.id != filter.id_pattern:
+            return False
+
+    if filter.min_level is not None:
+        if player.level < filter.min_level:
+            return False
+
+    if filter.max_level is not None:
+        if player.level > filter.max_level:
+            return False
+
+    return True
+
+
+def players_list(filter: PlayersFilter) -> list:
+    short_format = filter.has_name()
+
     players_list = list(players.items())
     players_list.sort(key=lambda item: item[1].created_at)
 
     res = []
     for _, player in players_list:
-        player_data = player.model_dump()
-        player_data["id"] = player.id
-        res.append(player_data)
+        if not player_matches_filter(player, filter):
+            continue
 
-    return res
-
-
-def search_players_by_name(name: str) -> list:
-    name_lower = name.casefold()
-    res = []
-
-    for player in players.values():
-        if name_lower in player.name.casefold():
+        if short_format:
             res.append({
                 "id": player.id,
                 "name": player.name,
                 "level": player.level
             })
+        else:
+            player_data = player.model_dump()
+            player_data["id"] = player.id
+            res.append(player_data)
 
-    res.sort(key=lambda item: item["id"])
     return res
 
 
