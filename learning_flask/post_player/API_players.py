@@ -8,21 +8,22 @@ def error_response(message, status_code):
     return {"error": message}, status_code
 
 
-@app.route('/player', methods=['POST'])
+@app.route('/admin/player', methods=['POST'])
 def create_player():
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
         return error_response("Invalid request format", 400)
 
     name = data.get('name')
+    level = data.get('level')
 
-    level, error = utils.check_player_and_get_level(name)
+    level_0, error = utils.check_player_and_get_level(name)
     if error != "":
         if error == "name already exists":
             return error_response(error, 409)
         return error_response(error, 400)
 
-    player = utils.create_player(name)
+    player = utils.create_player(name, level)
     return {"message": "Player created",
             "player": player.model_dump()}, 200
 
@@ -67,14 +68,18 @@ def raise_the_level():
     return error_response("Player not found", 404)
 
 
-@app.route('/players', methods=['GET'])
+@app.route('/admin/players', methods=['POST'])
 def return_lst_players():
-    name = request.args.get("name")
-    id = request.args.get("id")
-    min_level = request.args.get("min_level")
-    max_level = request.args.get("max_level")
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return error_response("Invalid request format", 400)
 
     filter = utils.PlayersFilter()
+
+    name = data.get("name")
+    id = data.get("id")
+    min_level = data.get("min_level")
+    max_level = data.get("max_level")
 
     if name is not None:
         filter.name_pattern = name
@@ -94,8 +99,19 @@ def return_lst_players():
             return error_response("max_level must be a number", 400)
         filter.max_level = int(max_level)
 
-    players_list = utils.players_list(filter)
-    return {"players": players_list}, 200
+    page = data.get("page")
+    limit = data.get("limit")
+    sort_by = data.get("sort_by")
+    order = data.get("order")
+
+    page_int, limit_int, sort_by, order, error = utils.check_pagination_and_sort(
+        page, limit, sort_by, order
+    )
+    if error != "":
+        return error_response(error, 400)
+
+    result = utils.paginate_players(filter, page_int, limit_int, sort_by, order)
+    return result, 200
 
 
 @app.route('/player', methods=['GET'])
@@ -141,4 +157,5 @@ def ret_stats():
 
 
 if __name__ == "__main__":
+    utils.generate_mock_players()
     app.run()

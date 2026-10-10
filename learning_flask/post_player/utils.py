@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
+import random
 
 
 class Player(BaseModel):
@@ -20,6 +21,41 @@ class PlayersFilter:
     def has_name(self):
         if self.name_pattern is None or self.name_pattern == "":
             return False
+        return True
+
+    def has_id(self):
+        if self.id_pattern is None:
+            return False
+        return True
+
+    def has_min_level(self):
+        if self.min_level is None:
+            return False
+        return True
+
+    def has_max_level(self):
+        if self.max_level is None:
+            return False
+        return True
+
+    def matches(self, player: Player) -> bool:
+        if self.has_name():
+            name_lower = self.name_pattern.casefold()
+            if name_lower not in player.name.casefold():
+                return False
+
+        if self.has_id():
+            if player.id != self.id_pattern:
+                return False
+
+        if self.has_min_level():
+            if player.level < self.min_level:
+                return False
+
+        if self.has_max_level():
+            if player.level > self.max_level:
+                return False
+
         return True
 
 
@@ -91,6 +127,46 @@ def check_get_player(id: str) -> tuple[int, str]:
     return int(id), ""
 
 
+def check_pagination_and_sort(page, limit, sort_by, order) -> tuple[int, int, str, str, str]:
+    if page is None:
+        page = "1"
+
+    if limit is None:
+        limit = "10"
+
+    if not str(page).isdigit():
+        return 0, 0, "", "", "page must be a number"
+
+    if not str(limit).isdigit():
+        return 0, 0, "", "", "limit must be a number"
+
+    page_int = int(page)
+    limit_int = int(limit)
+
+    if page_int < 1:
+        return 0, 0, "", "", "page must be >= 1"
+
+    if limit_int < 1:
+        return 0, 0, "", "", "limit must be >= 1"
+
+    if limit_int > 100:
+        return 0, 0, "", "", "limit must be <= 100"
+
+    if sort_by is None or sort_by == "":
+        sort_by = "created_at"
+
+    if sort_by not in ("level", "gold", "created_at"):
+        return 0, 0, "", "", "sort_by must be one of: level, gold, created_at"
+
+    if order is None or order == "":
+        order = "asc"
+
+    if order not in ("asc", "desc"):
+        return 0, 0, "", "", "order must be one of: asc, desc"
+
+    return page_int, limit_int, sort_by, order, ""
+
+
 def is_name_taken(name: str) -> bool:
     name_lower = name.strip().casefold()
     for player in players.values():
@@ -99,10 +175,10 @@ def is_name_taken(name: str) -> bool:
     return False
 
 
-def create_player(name: str) -> Player:
+def create_player(name: str, level: int) -> Player:
     global player_id
     player_id += 1
-    player = Player(name=name, level=0, gold=0, experience=0,
+    player = Player(name=name, level=level, gold=0, experience=0,
                     id=player_id, created_at=datetime.now())
     players[player_id] = player
     return player
@@ -132,50 +208,62 @@ def calculate_level(experiece: int) -> int:
     return (experiece // 100) + 1
 
 
-def player_matches_filter(player: Player, filter: PlayersFilter) -> bool:
-    if filter.has_name():
-        name_lower = filter.name_pattern.casefold()
-        if name_lower not in player.name.casefold():
-            return False
-
-    if filter.id_pattern is not None:
-        if player.id != filter.id_pattern:
-            return False
-
-    if filter.min_level is not None:
-        if player.level < filter.min_level:
-            return False
-
-    if filter.max_level is not None:
-        if player.level > filter.max_level:
-            return False
-
-    return True
-
-
 def players_list(filter: PlayersFilter) -> list:
-    short_format = filter.has_name()
-
     players_list = list(players.items())
     players_list.sort(key=lambda item: item[1].created_at)
 
     res = []
     for _, player in players_list:
-        if not player_matches_filter(player, filter):
+        if not filter.matches(player):
             continue
 
-        if short_format:
-            res.append({
-                "id": player.id,
-                "name": player.name,
-                "level": player.level
-            })
-        else:
-            player_data = player.model_dump()
-            player_data["id"] = player.id
-            res.append(player_data)
+        player_data = player.model_dump()
+        player_data["id"] = player.id
+        res.append(player_data)
 
     return res
+
+
+def paginate_players(filter: PlayersFilter, page: int, limit: int,
+                     sort_by: str, order: str) -> dict:
+    filtered = []
+    for player in players.values():
+        if filter.matches(player):
+            filtered.append(player)
+
+    if order == "desc":
+        reverse = True
+    else:
+        reverse = False
+
+    filtered.sort(key=lambda player: getattr(player, sort_by), reverse=reverse)
+
+    total = len(filtered)
+    total_pages = (total + limit - 1) // limit
+
+    start = (page - 1) * limit
+    end = start + limit
+    page_players = filtered[start:end]
+
+    items = []
+    for player in page_players:
+        items.append({
+            "id": player.id,
+            "name": player.name,
+            "level": player.level
+        })
+
+    return {
+        "players": items,
+        "page": page,
+        "limit": limit,
+        "total": total,
+        "total_pages": total_pages,
+        "has_next": page < total_pages,
+        "has_prev": page > 1,
+        "sort_by": sort_by,
+        "order": order
+    }
 
 
 def get_player(id: int) -> Player | None:
@@ -229,3 +317,26 @@ def ret_stats() -> dict:
         "max_level": max_level,
         "average_level": averge_level / len(players)
     }
+
+
+mock_names = ["art7235", "qwerty", "12345", "awsd", "Артём", "Ольга", "Максим", "Елена", "Иван"]
+
+
+def generate_mock_players():
+    used_names = set()
+    attempts = 0
+    max_attempts = 300
+
+    while len(used_names) < 100 and attempts < max_attempts:
+        attempts += 1
+        name = mock_names[random.randint(0, len(mock_names) - 1)]
+
+        unique_name = name
+        suffix = 1
+        while unique_name in used_names:
+            unique_name = f"{name}_{suffix}"
+            suffix += 1
+
+        used_names.add(unique_name)
+        level = random.randint(1, 100)
+        create_player(unique_name, level)
